@@ -1,0 +1,187 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Trigger Experience</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+
+    #start-screen {
+      text-align: center;
+      padding: 40px;
+    }
+
+    #experience {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .prompt-container {
+      margin: 20px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    input[type="text"] {
+      width: 80%;
+      padding: 10px;
+      margin: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    #target-link {
+      display: block;
+      margin: 20px 0;
+      padding: 10px;
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    #target-link:hover {
+      text-decoration: underline;
+    }
+
+    .users-container {
+      margin-top: 20px;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    .user {
+      display: inline-block;
+      margin: 5px;
+      text-align: center;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div id="start-screen">
+    <h1>Auto Trigger Experience</h1>
+    <button id="start-btn">Start Experience</button>
+  </div>
+
+  <div id="experience">
+    <div id="users" class="users-container"></div>
+    
+    <div class="prompt-container">
+      <input type="text" id="prompt-input" placeholder="Enter your URL prompt...">
+      <button id="prompt-btn">PROMPT</button>
+    </div>
+
+    <a id="target-link" href="" target="_blank">Click or wait for prompt...</a>
+  </div>
+
+  <script type="module">
+    const room = new WebsimSocket();
+    const startScreen = document.getElementById('start-screen');
+    const experience = document.getElementById('experience');
+    const promptInput = document.getElementById('prompt-input');
+    const promptBtn = document.getElementById('prompt-btn');
+    const targetLink = document.getElementById('target-link');
+    const startBtn = document.getElementById('start-btn');
+    const usersContainer = document.getElementById('users');
+
+    // Start experience button
+    startBtn.addEventListener('click', () => {
+      startScreen.style.display = 'none';
+      experience.style.display = 'block';
+      room.send({ type: 'joined' });
+    });
+
+    // Update users display
+    function updateUsers() {
+      usersContainer.innerHTML = '';
+      for (const clientId in room.party.peers) {
+        const { username, avatarUrl } = room.party.peers[clientId];
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user';
+        userDiv.innerHTML = `
+          <img class="avatar" src="${avatarUrl}" alt="${username}">
+          <div>${username}</div>
+        `;
+        usersContainer.appendChild(userDiv);
+      }
+    }
+
+    room.party.subscribe(updateUsers);
+
+    // Handle prompt input changes
+    promptInput.addEventListener('input', (e) => {
+      const url = e.target.value;
+      room.send({
+        type: 'update-url',
+        url
+      });
+      updateTargetLink(url);
+    });
+
+    // Handle prompt button click
+    promptBtn.addEventListener('click', () => {
+      room.send({
+        type: 'trigger-click'
+      });
+      triggerClick();
+    });
+
+    function updateTargetLink(url) {
+      targetLink.href = url;
+      targetLink.textContent = url || 'Click or wait for prompt...';
+    }
+
+    function triggerClick() {
+      targetLink.click();
+    }
+
+    // Handle incoming messages
+    room.onmessage = (event) => {
+      const { type, url } = event.data;
+      
+      switch(type) {
+        case 'update-url':
+          promptInput.value = url;
+          updateTargetLink(url);
+          break;
+        case 'trigger-click':
+          triggerClick();
+          break;
+        case 'joined':
+          updateUsers();
+          break;
+      }
+    };
+  </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
